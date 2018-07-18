@@ -1,9 +1,15 @@
 .. _section_dataformat:
 
-Training Data Format
-====================
+Training and Data Format
+========================
 
-The training data for rasa NLU is structured into different parts, ``common_examples``, ``entity_synonyms`` and ``regex_features``. The most important one is ``common_examples``.
+
+Data Format
+~~~~~~~~~~~
+
+The training data for Rasa NLU is structured into different parts,
+``common_examples``, ``entity_synonyms`` and ``regex_features``.
+The most important one is ``common_examples``.
 
 .. code-block:: json
 
@@ -19,6 +25,8 @@ The ``common_examples`` are used to train both the entity and the intent models.
 examples in the ``common_examples`` array. The next section describes in detail how an example looks like.
 Regex features are a tool to help the classifier detect entities or intents and improve the performance.
 
+You can use `Chatito <https://rodrigopivi.github.io/Chatito/>`__ , a tool for generating training datasets in rasa's format using a simple DSL or `Tracy <https://yuukanoo.github.io/tracy>`__, a simple GUI to create training datasets for rasa.
+
 Common Examples
 ---------------
 
@@ -32,18 +40,18 @@ Entities are specified with a ``start`` and  ``end`` value, which together make 
 style range to apply to the string, e.g. in the example below, with ``text="show me chinese
 restaurants"``, then ``text[8:15] == 'chinese'``. Entities can span multiple words, and in
 fact the ``value`` field does not have to correspond exactly to the substring in your example.
-That way you can map syonyms, or misspellings, to the same ``value``.
+That way you can map synonyms, or misspellings, to the same ``value``.
 
 .. code-block:: json
 
     {
-      "text": "show me chinese restaurants", 
-      "intent": "restaurant_search", 
+      "text": "show me chinese restaurants",
+      "intent": "restaurant_search",
       "entities": [
         {
-          "start": 8, 
-          "end": 15, 
-          "value": "chinese", 
+          "start": 8,
+          "end": 15,
+          "value": "chinese",
           "entity": "cuisine"
         }
       ]
@@ -105,6 +113,11 @@ Alternatively, you can add an "entity_synonyms" array to define several synonyms
     }
   }
 
+.. note::
+    Please note that adding synonyms using the above format does not improve the model's classification of those entities.
+    **Entities must be properly classified before they can be replaced with the synonym value.**
+
+
 Regular Expression Features
 ---------------------------
 Regular expressions can be used to support the intent classification and entity extraction. E.g. if your entity
@@ -122,7 +135,7 @@ the zipcode example it might look like this:
                 },
                 {
                     "name": "greet",
-                    "pattern": "hey[^\s]*"
+                    "pattern": "hey[^\\s]*"
                 },
             ]
         }
@@ -136,7 +149,7 @@ Try to create your regular expressions in a way that they match as few words as 
 instead of ``hey.*``, as the later one might match the whole message whereas the first one only matches a single word.
 
 Regex features for entity extraction are currently only supported by the ``ner_crf`` component! Hence, other entity
-extractors, like ``ner_mitie`` won't use the generated features and their presence will not improve entity recognition
+extractors, like ``ner_mitie`` or ``ner_spacy`` won't use the generated features and their presence will not improve entity recognition
 for these extractors. Currently, all intent classifiers make use of available regex features.
 
 .. note::
@@ -145,11 +158,12 @@ for these extractors. Currently, all intent classifiers make use of available re
     training data!
 
 Markdown Format
----------------------------
+---------------
 
-Alternatively training data can be used in the following markdown format (Regex features not supported yet):
+Alternatively training data can be used in the following markdown format. Examples are listed using the unordered
+list syntax, e.g. minus ``-``, asterisk ``*``, or plus ``+``:
 
-.. code-block:: markdown
+.. code-block:: md
 
     ## intent:check_balance
     - what is my balance <!-- no entity -->
@@ -162,3 +176,39 @@ Alternatively training data can be used in the following markdown format (Regex 
 
     ## synonym:savings   <!-- synonyms, method 2 -->
     - pink pig
+
+
+    ## regex:zipcode
+    - [0-9]{5}
+
+Organization
+------------
+
+The training data can either be stored in a single file or split into multiple files.
+For larger training examples, splitting the training data into multiple files, e.g. one per intent, increases maintainability.
+
+Storing files with different file formats, i.e. mixing markdown and JSON, is currently not supported.
+
+.. note::
+    Splitting the training data into multiple files currently only works for markdown and JSON data.
+    For other file formats you have to use the single-file approach.
+
+.. _train_parameters:
+
+Train a Model
+~~~~~~~~~~~~~
+
+There is a helper script that allows you to train a model.
+
+.. code-block:: bash
+
+    $ python -m rasa_nlu.train
+
+Here is a quick overview over the parameters you can pass to that script:
+
+.. program-output:: python -m rasa_nlu.train --help
+
+The other ways to train a model are
+
+- training it using your own python code
+- training it using the HTTP api (:ref:`section_http`)
